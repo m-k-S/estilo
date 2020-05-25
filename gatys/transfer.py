@@ -19,12 +19,6 @@ transform = transforms.Compose([
          std=[0.229, 0.224, 0.225]),
 ])
 
-unloader = transforms.Compose([
-    Unnormalize(mean=[0.485, 0.456, 0.406],
-         std=[0.229, 0.224, 0.225]),
-    transforms.ToPILImage(),
-])
-
 style_img = transform(Image.open("picasso.jpg")).unsqueeze(0)
 content_img = transform(Image.open("dancing.jpg")).unsqueeze(0)
 
@@ -56,6 +50,13 @@ class Unnormalize(object):
             t.mul_(s).add_(m)
             # The normalize code -> t.sub_(m).div_(s)
         return tensor
+
+unloader = transforms.Compose([
+    Unnormalize(mean=[0.485, 0.456, 0.406],
+         std=[0.229, 0.224, 0.225]),
+    transforms.ToPILImage(),
+])
+
 
 class ContentLoss(nn.Module):
     def __init__(self, target,):
