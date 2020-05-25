@@ -134,34 +134,37 @@ input_img = content_img.clone()
 # parameters here are the input image pixels
 optimizer = optim.LBFGS([input_img.requires_grad_()])
 
-def closure():
-    optimizer.zero_grad()
-    model(input_img)
-    style_score = 0
-    content_score = 0
-
-    for sl in style_losses:
-        style_score += sl.loss
-    for cl in content_losses:
-        content_score += cl.loss
-
-    style_score *= style_weight
-    content_score *= content_weight
-
-    loss = style_score + content_score
-    loss.backward()
-    return loss
-
 style_weight = 1
 content_weight = 100
 for iter in tqdm(range(500)):
-    input_img.data.clamp_(0, 1)
+
+    def closure():
+        input_img.data.clamp_(0, 1)
+        optimizer.zero_grad()
+        model(input_img)
+        style_score = 0
+        content_score = 0
+
+        for sl in style_losses:
+            style_score += sl.loss
+        for cl in content_losses:
+            content_score += cl.loss
+
+        style_score *= style_weight
+        content_score *= content_weight
+
+        loss = style_score + content_score
+        loss.backward()
+        return loss
     optimizer.step(closure)
 
     if iter % 50 == 0:
+        input_img.data.clamp_(0, 1)
         output = input_img.squeeze()
         output = unloader(output)
         output.save("output.jpg")
+
+input_img.data.clamp_(0, 1)
 
 output = input_img.squeeze()
 output = unloader(output)
