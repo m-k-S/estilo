@@ -158,12 +158,13 @@ for iter in tqdm(range(500)):
 
         return style_score + content_score
 
+        if iter % 50 == 0:
+            output = input_img.copy().squeeze()
+            output = unloader(output)
+            output.save("output.jpg")
+
     optimizer.step(closure)
 
-    if iter % 50 == 0:
-        output = input_img.squeeze()
-        output = unloader(output)
-        output.save("output.jpg")
 
 input_img.data.clamp_(0, 1)
 
