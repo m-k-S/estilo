@@ -159,8 +159,11 @@ for iter in tqdm(range(500)):
     optimizer.step(closure)
 
     if iter % 50 == 0:
-        output = unloader(input_img).squeeze()
+        output = input_img.squeeze()
+        output = unloader(output)
+        print (output.shape)
         output.save("output.jpg")
 
-output = unloader(input_img).squeeze()
+output = input_img.squeeze()
+output = unloader(output)
 output.save("output.jpg")
