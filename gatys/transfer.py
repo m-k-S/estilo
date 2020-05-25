@@ -130,7 +130,6 @@ for layer in models.vgg19(pretrained=True).features:
 
 input_img = content_img.clone()
 
-
 # parameters here are the input image pixels
 optimizer = optim.LBFGS([input_img.requires_grad_()])
 
@@ -140,6 +139,7 @@ for iter in tqdm(range(500)):
 
     def closure():
         input_img.data.clamp_(0, 1)
+
         optimizer.zero_grad()
         model(input_img)
         style_score = 0
@@ -155,11 +155,12 @@ for iter in tqdm(range(500)):
 
         loss = style_score + content_score
         loss.backward()
-        return loss
+
+        return style_score + content_score
+
     optimizer.step(closure)
 
     if iter % 50 == 0:
-        input_img.data.clamp_(0, 1)
         output = input_img.squeeze()
         output = unloader(output)
         output.save("output.jpg")
