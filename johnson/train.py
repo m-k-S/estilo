@@ -11,7 +11,7 @@ import network
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-train_dir = 'train2014'
+train_dir = 'train_imgs'
 style_img_path = 'starrynight.jpg'
 img_size = 256
 batch_size = 1
