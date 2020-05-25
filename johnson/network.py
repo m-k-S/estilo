@@ -145,6 +145,6 @@ class LossNetwork(nn.Module):
         x = self.relu4(self.conv4(x))
         s_loss += self.style_loss(x, self.style_img)
         c_loss += self.content_loss(x, xc)
-        x = self.conv5(self.pool4(x)))
+        x = self.conv5(self.pool4(x))
         s_loss += self.style_loss(x, self.style_img)
         return x, c_loss, s_loss
