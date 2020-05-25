@@ -19,6 +19,12 @@ transform = transforms.Compose([
          std=[0.229, 0.224, 0.225]),
 ])
 
+unloader = transforms.Compose([
+    Unnormalize(mean=[0.485, 0.456, 0.406],
+         std=[0.229, 0.224, 0.225]),
+    transforms.ToPILImage(),
+])
+
 style_img = transform(Image.open("picasso.jpg")).unsqueeze(0)
 content_img = transform(Image.open("dancing.jpg")).unsqueeze(0)
 
@@ -147,15 +153,13 @@ def closure():
 
 style_weight = 1
 content_weight = 100
-for iter in tqdm(range(1000)):
+for iter in tqdm(range(500)):
     input_img.data.clamp_(0, 1)
     optimizer.step(closure)
 
-unloader = transforms.Compose([
-    Unnormalize(mean=[0.485, 0.456, 0.406],
-         std=[0.229, 0.224, 0.225]),
-    transforms.ToPILImage(),
-])
+    if iter % 50 == 0:
+        output = unloader(input_img)
+        output.save("output.jpg")
 
 output = unloader(input_img)
 output.save("output.jpg")
