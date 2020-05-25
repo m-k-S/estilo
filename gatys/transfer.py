@@ -161,7 +161,6 @@ for iter in tqdm(range(500)):
     if iter % 50 == 0:
         output = input_img.squeeze()
         output = unloader(output)
-        print (output.shape)
         output.save("output.jpg")
 
 output = input_img.squeeze()
