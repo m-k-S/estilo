@@ -37,7 +37,7 @@ losses = []
 for epoch in range(epochs):
     print("========Epoch {}/{}========".format(epoch+1, epochs))
     iter = 1
-    for batch, _ in tqdm(train_loader):
+    for batch, _ in train_loader:
         batch = batch.to(device)
         optimizer.zero_grad()
         yhat = FNS(batch)
@@ -50,9 +50,12 @@ for epoch in range(epochs):
 
         if iter % 50 == 0:
 
-            print ("CURRENT LOSS: {}".format(losses[-1]))
+            print ("ITER {} LOSS: {}".format(iter, losses[-1]))
             output = yhat.clone().cpu().squeeze()
             output = transforms.ToPILImage()(output)
             output.save("output.jpg")
+            
+            torch.save(TransformerNetwork.state_dict(), 'weights.pth')
+
 
         iter += 1
