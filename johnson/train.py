@@ -54,8 +54,8 @@ for epoch in range(epochs):
             output = yhat.clone().cpu().squeeze()
             output = transforms.ToPILImage()(output)
             output.save("output.jpg")
-            
-            torch.save(TransformerNetwork.state_dict(), 'weights.pth')
+
+            torch.save(FNS.state_dict(), 'weights.pth')
 
 
         iter += 1
