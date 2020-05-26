@@ -21,13 +21,13 @@ style_weight = 1
 content_weight = 100
 
 transform = transforms.Compose([
-    transforms.Resize(img_size),
+    transforms.Resize((img_size, img_size)),
     transforms.ToTensor()
 ])
 
 train_dataset = datasets.ImageFolder(train_dir, transform=transform)
 train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-style_img = transform(Image.open(style_img_path)).to(device)
+style_img = transform(Image.open(style_img_path)).unsqueeze(0).to(device)
 
 FNS = network.FastNeuralStyle().to(device)
 LossNet = network.LossNetwork(style_img).to(device)
@@ -37,7 +37,7 @@ losses = []
 for epoch in range(epochs):
     print("========Epoch {}/{}========".format(epoch+1, epochs))
     iter = 1
-    for batch, _ in train_loader:
+    for batch, _ in tqdm(train_loader):
         batch = batch.to(device)
         optimizer.zero_grad()
         yhat = FNS(batch)
@@ -50,7 +50,7 @@ for epoch in range(epochs):
 
         if iter % 50 == 0:
             print ("CURRENT LOSS: {}".format(losses[-1]))
-            output = yhat.copy().squeeze()
+            output = yhat.clone().squeeze()
             output = transforms.ToPILImage()(output)
             output.save("output.jpg")
 

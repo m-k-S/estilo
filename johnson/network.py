@@ -40,6 +40,22 @@ class ConvLayer(nn.Module):
             out = self.norm_layer(x)
         return out
 
+class DeconvLayer(nn.Module):
+    def __init__(self, in_channels, out_channels, kernel_size, stride, output_padding):
+        super(DeconvLayer, self).__init__()
+
+        # Transposed Convolution
+        padding_size = kernel_size // 2
+        self.conv_transpose = nn.ConvTranspose2d(in_channels, out_channels, kernel_size, stride, padding_size, output_padding)
+
+        self.norm_layer = nn.BatchNorm2d(out_channels, affine=True)
+
+    def forward(self, x):
+        x = self.conv_transpose(x)
+
+        out = self.norm_layer(x)
+        return out
+
 
 class FastNeuralStyle(nn.Module):
     def __init__(self):
@@ -52,11 +68,9 @@ class FastNeuralStyle(nn.Module):
         self.res3 = ResidualBlock(128, 128)
         self.res4 = ResidualBlock(128, 128)
         self.res5 = ResidualBlock(128, 128)
-        self.conv4 = nn.ConvTranspose2d(128, 64, 3, stride=2, padding=1)
-        self.bn4 = nn.BatchNorm2d(64)
-        self.conv5 = nn.ConvTranspose2d(64, 32, 3, stride=2, padding=1)
-        self.bn5 = nn.BatchNorm2d(32)
-        self.conv6 = nn.Conv2d(32, 3, 9, stride=1)
+        self.conv4 = DeconvLayer(128, 64, 3, 2, 1)
+        self.conv5 = DeconvLayer(64, 32, 3, 2, 1)
+        self.conv6 = ConvLayer(32, 3, 9, stride=1, norm_type="None")
 
     def forward(self, x):
         x = F.relu(self.conv1(x))
@@ -67,8 +81,8 @@ class FastNeuralStyle(nn.Module):
         x = self.res3(x)
         x = self.res4(x)
         x = self.res5(x)
-        x = F.relu(self.bn4(self.conv4(x)))
-        x = F.relu(self.bn5(self.conv5(x)))
+        x = F.relu(self.conv4(x))
+        x = F.relu(self.conv5(x))
         x = self.conv6(x)
         return x
 
@@ -90,7 +104,7 @@ class ContentLoss(nn.Module):
     def forward(self, input, target):
         target = target.detach()
         self.loss = F.mse_loss(input, target)
-        return input
+        return self.loss
 
 def gram_matrix(input):
     a, b, c, d = input.size()  # a=batch size(=1)
@@ -98,7 +112,6 @@ def gram_matrix(input):
     # (c,d)=dimensions of a f. map (N=c*d)
 
     features = input.view(a * b, c * d)  # resise F_XL into \hat F_XL
-
     G = torch.mm(features, features.t())  # compute the gram product
 
     # we 'normalize' the values of the gram matrix
@@ -113,7 +126,7 @@ class StyleLoss(nn.Module):
         target = gram_matrix(target).detach()
         G = gram_matrix(input)
         self.loss = F.mse_loss(G, target)
-        return input
+        return self.loss
 
 class LossNetwork(nn.Module):
     def __init__(self, style_img):
@@ -137,21 +150,21 @@ class LossNetwork(nn.Module):
         self.conv4 = feats[7]
         self.relu4 = feats[8]
         self.pool4 = feats[9]
-        self.conv4 = feats[10]
+        self.conv5 = feats[10]
 
         self.style_img = self.norm(style_img.detach())
         self.style_loss = StyleLoss()
         self.content_loss = ContentLoss()
 
     def forward(self, x, content):
-        content_layers = ['conv4']
-        style_layers = ['conv1', 'conv2', 'conv3', 'conv4', 'conv5']
-
         s_loss = 0
         c_loss = 0
 
         x = self.norm(x)
         content = self.norm(content)
+        content = self.relu2(self.conv2(self.relu1(self.conv1(content))))
+        content = self.relu3(self.conv3(self.pool2(content)))
+        content = self.relu4(self.conv4(content))
 
         x = self.relu1(self.conv1(x))
         style = self.relu1(self.conv1(self.style_img))
