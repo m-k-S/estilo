@@ -49,8 +49,9 @@ for epoch in range(epochs):
         optimizer.step()
 
         if iter % 50 == 0:
+
             print ("CURRENT LOSS: {}".format(losses[-1]))
-            output = yhat.clone().squeeze()
+            output = yhat.clone().cpu().squeeze()
             output = transforms.ToPILImage()(output)
             output.save("output.jpg")
 
