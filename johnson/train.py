@@ -18,7 +18,7 @@ batch_size = 1
 lr = 1e-3
 epochs = 1
 style_weight = 1
-content_weight = 100
+content_weight = 1
 
 transform = transforms.Compose([
     transforms.Resize((img_size, img_size)),
@@ -26,7 +26,7 @@ transform = transforms.Compose([
 ])
 
 train_dataset = datasets.ImageFolder(train_dir, transform=transform)
-train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+train_loader = torch.utils.data.DataLoader(train_dataset[:20000], batch_size=batch_size, shuffle=True)
 style_img = transform(Image.open(style_img_path)).unsqueeze(0).to(device)
 
 FNS = network.FastNeuralStyle().to(device)
