@@ -7,29 +7,45 @@ import torchvision.models as models
 class ResidualBlock(nn.Module):
     def __init__(self, input_size, channels):
         super(ResidualBlock, self).__init__()
-        self.conv1 = nn.Conv2d(input_size, channels, 3)
-        self.bn1 = nn.BatchNorm2d(channels)
-        self.conv2 = nn.Conv2d(channels, channels, 3)
+        self.conv1 = ConvLayer(input_size, channels, 3, 1)
+        self.conv2 = ConvLayer(channels, channels, 3, 1)
         self.bn2 = nn.BatchNorm2d(channels)
 
     def forward(self, x):
         xc = x.clone()
-        x = self.conv1(x)
-        x = F.relu(self.bn1(x))
+        x = F.relu(self.conv1(x))
         x = self.conv2(x)
-        x = self.bn2(x)
         x = x + xc
         return x
+
+class ConvLayer(nn.Module):
+    def __init__(self, in_channels, out_channels, kernel_size, stride, norm_type):
+        super(ConvLayer, self).__init__()
+        # Padding Layers
+        padding_size = kernel_size // 2
+        self.reflection_pad = nn.ReflectionPad2d(padding_size)
+
+        # Convolution Layer
+        self.conv_layer = nn.Conv2d(in_channels, out_channels, kernel_size, stride)
+
+        self.norm_layer = nn.BatchNorm2d(out_channels, affine=True)
+
+    def forward(self, x):
+        x = self.reflection_pad(x)
+        x = self.conv_layer(x)
+        if (self.norm_type=="None"):
+            out = x
+        else:
+            out = self.norm_layer(x)
+        return out
+
 
 class FastNeuralStyle(nn.Module):
     def __init__(self):
         super(FastNeuralStyle, self).__init__()
-        self.conv1 = nn.Conv2d(3, 32, 9)
-        self.bn1 = nn.BatchNorm2d(32)
-        self.conv2 = nn.Conv2d(32, 64, 3, stride=2)
-        self.bn2 = nn.BatchNorm2d(64)
-        self.conv3 = nn.Conv2d(64, 128, 3, stride=2)
-        self.bn3 = nn.BatchNorm2d(128)
+        self.conv1 = ConvLayer(3, 32, 9, 1)
+        self.conv2 = ConvLayer(32, 64, 3, stride=2)
+        self.conv3 = ConvLayer(64, 128, 3, stride=2)
         self.res1 = ResidualBlock(128, 128)
         self.res2 = ResidualBlock(128, 128)
         self.res3 = ResidualBlock(128, 128)
@@ -42,9 +58,9 @@ class FastNeuralStyle(nn.Module):
         self.conv6 = nn.Conv2d(32, 3, 9, stride=1)
 
     def forward(self, x):
-        x = F.relu(self.bn1(self.conv1(x)))
-        x = F.relu(self.bn2(self.conv2(x)))
-        x = F.relu(self.bn3(self.conv3(x)))
+        x = F.relu(self.conv1(x))
+        x = F.relu(self.conv2(x))
+        x = F.relu(self.conv3(x))
         x = self.res1(x)
         x = self.res2(x)
         x = self.res3(x)
