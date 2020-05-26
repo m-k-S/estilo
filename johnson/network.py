@@ -110,7 +110,7 @@ class StyleLoss(nn.Module):
         super(StyleLoss, self).__init__()
 
     def forward(self, input, target):
-        target = gram_matrix(target_feature).detach()
+        target = gram_matrix(target).detach()
         G = gram_matrix(input)
         self.loss = F.mse_loss(G, target)
         return input
