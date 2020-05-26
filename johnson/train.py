@@ -27,7 +27,7 @@ transform = transforms.Compose([
 
 train_dataset = datasets.ImageFolder(train_dir, transform=transform)
 train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-style_img = transform(Image.open(style_img_path)).unsqueeze(0).to(device)
+style_img = transform(Image.open(style_img_path)).to(device)
 
 FNS = network.FastNeuralStyle().to(device)
 LossNet = network.LossNetwork(style_img).to(device)
