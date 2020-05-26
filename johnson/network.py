@@ -143,7 +143,7 @@ class LossNetwork(nn.Module):
         self.style_loss = StyleLoss()
         self.content_loss = ContentLoss()
 
-    def forward(self, x):
+    def forward(self, x, content):
         content_layers = ['conv4']
         style_layers = ['conv1', 'conv2', 'conv3', 'conv4', 'conv5']
 
@@ -151,17 +151,27 @@ class LossNetwork(nn.Module):
         c_loss = 0
 
         x = self.norm(x)
-        xc = x.clone()
+        content = self.norm(content)
 
         x = self.relu1(self.conv1(x))
-        s_loss += self.style_loss(x, self.style_img)
+        style = self.relu1(self.conv1(self.style_img))
+        s_loss += self.style_loss(x, style)
+
         x = self.relu2(self.conv2(x))
-        s_loss += self.style_loss(x, self.style_img)
+        style = self.relu2(self.conv2(style))
+        s_loss += self.style_loss(x, style)
+
         x = self.relu3(self.conv3(self.pool2(x)))
-        s_loss += self.style_loss(x, self.style_img)
+        style = self.relu3(self.conv3(self.pool2(style)))
+        s_loss += self.style_loss(x, style)
+
         x = self.relu4(self.conv4(x))
-        s_loss += self.style_loss(x, self.style_img)
-        c_loss += self.content_loss(x, xc)
+        style = self.relu4(self.conv4(style))
+        s_loss += self.style_loss(x, style)
+        c_loss += self.content_loss(x, content)
+
         x = self.conv5(self.pool4(x))
-        s_loss += self.style_loss(x, self.style_img)
+        style = self.conv5(self.pool4(style))
+        s_loss += self.style_loss(x, style)
+
         return x, c_loss, s_loss

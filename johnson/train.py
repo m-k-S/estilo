@@ -42,7 +42,7 @@ for epoch in range(epochs):
         optimizer.zero_grad()
         yhat = FNS(batch)
 
-        _, c_loss, s_loss = LossNet(yhat)
+        _, c_loss, s_loss = LossNet(yhat, batch)
         total_loss = content_weight * c_loss + style_weight * s_loss
         losses.append(total_loss.item())
         total_loss.backward()
