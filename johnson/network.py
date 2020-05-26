@@ -19,7 +19,7 @@ class ResidualBlock(nn.Module):
         return x
 
 class ConvLayer(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size, stride, norm_type):
+    def __init__(self, in_channels, out_channels, kernel_size, stride, norm_type="batch"):
         super(ConvLayer, self).__init__()
         # Padding Layers
         padding_size = kernel_size // 2
