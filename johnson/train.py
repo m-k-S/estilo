@@ -38,6 +38,7 @@ for epoch in range(epochs):
     print("========Epoch {}/{}========".format(epoch+1, epochs))
     iter = 1
     for batch, _ in train_loader:
+        batch = batch.to(device)
         optimizer.zero_grad()
         yhat = FNS(batch)
 
