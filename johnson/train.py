@@ -26,12 +26,16 @@ transform = transforms.Compose([
 ])
 
 train_dataset = datasets.ImageFolder(train_dir, transform=transform)
-train_loader = torch.utils.data.DataLoader(train_dataset[:20000], batch_size=batch_size, shuffle=True)
+
+train_dataset = torch.utils.data.Subset(train_dataset, [i for i in range(20000)])
+
+train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 style_img = transform(Image.open(style_img_path)).unsqueeze(0).to(device)
 
 FNS = network.FastNeuralStyle().to(device)
 LossNet = network.LossNetwork(style_img).to(device)
 optimizer = optim.Adam(FNS.parameters(), lr=lr)
+
 
 losses = []
 for epoch in range(epochs):
