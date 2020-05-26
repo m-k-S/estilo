@@ -17,7 +17,7 @@ img_size = 256
 batch_size = 1
 lr = 1e-3
 epochs = 1
-style_weight = 1
+style_weight = 100
 content_weight = 1
 
 transform = transforms.Compose([
