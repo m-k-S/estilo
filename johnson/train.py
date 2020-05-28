@@ -22,12 +22,17 @@ content_weight = 1
 
 transform = transforms.Compose([
     transforms.Resize((img_size, img_size)),
-    transforms.ToTensor()
+    transforms.ToTensor(),
+    transforms.Normalize(norm_mean, norm_std)
 ])
 
 norm_mean = torch.tensor([0.485, 0.456, 0.406]).to(device)
 norm_std = torch.tensor([0.229, 0.224, 0.225]).to(device)
-vgg_norm = transforms.Normalize(norm_mean, norm_std)
+def vgg_norm(batch, mean=norm_mean, std=norm_std):
+    b, c, h, w = batch.shape
+    std = std.repeat(1, b).view(b, 3, 1, 1)
+    mean = mean.repeat(1, b).view(b, 3, 1, 1)
+    return (batch - mean) / std
 
 train_dataset = datasets.ImageFolder(train_dir, transform=transform)
 train_dataset = torch.utils.data.Subset(train_dataset, [i for i in range(20000)])
