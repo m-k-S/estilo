@@ -41,7 +41,7 @@ FNS = network.FastNeuralStyle().to(device)
 LossNet = network.LossNetwork().to(device)
 optimizer = optim.Adam(FNS.parameters(), lr=lr)
 
-style_img = vgg_norm(transform(Image.open(style_img_path))).unsqueeze(0).to(device)
+style_img = F.normalize((transform(Image.open(style_img_path))), norm_mean, norm_std).unsqueeze(0).to(device)
 style_feats = LossNet(style_img)
 style_layers = {'3': 'relu1_2', '8': 'relu2_2', '17': 'relu3_4', '22': 'relu4_2', '26': 'relu4_4', '35': 'relu5_4'}
 content_layer = 'relu2_2'
