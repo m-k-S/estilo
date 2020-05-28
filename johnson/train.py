@@ -23,7 +23,7 @@ content_weight = 1e5
 
 transform = transforms.Compose([
     transforms.Resize((img_size, img_size)),
-    transforms.CenterCrop(image_size),
+    transforms.CenterCrop(img_size),
     transforms.ToTensor(),
     transforms.Lambda(lambda x: x.mul(255))
 ])
