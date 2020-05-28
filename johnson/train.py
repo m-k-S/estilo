@@ -15,15 +15,17 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 train_dir = 'train_imgs'
 style_img_path = 'starrynight.jpg'
 img_size = 256
-batch_size = 8
+batch_size = 4
 lr = 1e-3
 epochs = 1
-style_weight = 100
-content_weight = 1
+style_weight = 1e10
+content_weight = 1e5
 
 transform = transforms.Compose([
     transforms.Resize((img_size, img_size)),
-    transforms.ToTensor()
+    transforms.CenterCrop(image_size),
+    transforms.ToTensor(),
+    transforms.Lambda(lambda x: x.mul(255))
 ])
 
 norm_mean = torch.tensor([0.485, 0.456, 0.406]).to(device)
@@ -42,12 +44,18 @@ FNS = network.FastNeuralStyle().to(device)
 LossNet = network.LossNetwork().to(device)
 optimizer = optim.Adam(FNS.parameters(), lr=lr)
 
-style_img = vgg_norm(transform(Image.open(style_img_path)).unsqueeze(0).to(device))
+style_transform = transforms.Compose([
+    transforms.ToTensor(),
+    transforms.Lambda(lambda x: x.mul(255))
+])
+
+style_img = vgg_norm(style_transform(Image.open(style_img_path)).unsqueeze(0).to(device))
 style_feats = LossNet(style_img)
 style_layers = {'3': 'relu1_2', '8': 'relu2_2', '17': 'relu3_4', '22': 'relu4_2', '26': 'relu4_4', '35': 'relu5_4'}
 content_layer = 'relu2_2'
 
 losses = []
+FNS.train()
 for epoch in range(epochs):
     print("========Epoch {}/{}========".format(epoch+1, epochs))
     iter = 1
