@@ -1,6 +1,7 @@
 from tqdm import tqdm
 
 import torch
+import torch.nn.functional as F
 import torchvision.transforms as transforms
 from torchvision import datasets
 import torch.optim as optim
@@ -14,7 +15,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 train_dir = 'train_imgs'
 style_img_path = 'starrynight.jpg'
 img_size = 256
-batch_size = 1
+batch_size = 8
 lr = 1e-3
 epochs = 1
 style_weight = 100
@@ -34,7 +35,7 @@ def vgg_norm(batch, mean=norm_mean, std=norm_std):
     return (batch - mean) / std
 
 train_dataset = datasets.ImageFolder(train_dir, transform=transform)
-train_dataset = torch.utils.data.Subset(train_dataset, [i for i in range(20000)])
+# train_dataset = torch.utils.data.Subset(train_dataset, [i for i in range(20000)])
 train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
 FNS = network.FastNeuralStyle().to(device)
@@ -56,16 +57,22 @@ for epoch in range(epochs):
 
         yhat = FNS(batch)
 
-        content_feats = LossNet(vgg_norm(batch))
-        yhat_feats = LossNet(vgg_norm(yhat))
+        batch_content_loss = 0
+        batch_style_loss = 0
+        for b in range(batch_size):
+            content_feats = LossNet(vgg_norm(batch[b, :, :, :].unsqueeze(0)))
+            yhat_feats = LossNet(vgg_norm(yhat[b, :, :, :].unsqueeze(0)))
 
-        # relu2_2 for content loss
-        c_loss = network.content_loss(yhat_feats[content_layer], content_feats[content_layer])
-        s_loss = 0
-        for layer in style_layers.values():
-            s_loss += network.style_loss(yhat_feats[layer], style_feats[layer])
+            # relu2_2 for content loss
+            content_loss = network.content_loss(yhat_feats[content_layer], content_feats[content_layer])
+            batch_content_loss += content_loss
 
-        total_loss = content_weight * c_loss + style_weight * s_loss
+            style_loss = 0
+            for layer in style_layers.values():
+                style_loss += network.style_loss(yhat_feats[layer], style_feats[layer])
+            batch_style_loss += style_loss
+
+        total_loss = content_weight * batch_content_loss + style_weight * batch_style_loss
         losses.append(total_loss.item())
         total_loss.backward()
         optimizer.step()

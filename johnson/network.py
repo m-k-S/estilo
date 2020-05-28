@@ -89,24 +89,23 @@ class FastNeuralStyle(nn.Module):
         return x
 
 def content_loss(input, target):
+    # b, c, h, w = input.shape
     target = target.detach()
+    # target = torch.cat(b*[target.detach()])
     return F.mse_loss(input, target)
 
-def gram_matrix(input):
-    a, b, c, d = input.size()  # a=batch size(=1)
-    # b=number of feature maps
-    # (c,d)=dimensions of a f. map (N=c*d)
-
-    features = input.view(a * b, c * d)  # resise F_XL into \hat F_XL
-    G = torch.mm(features, features.t())  # compute the gram product
-
-    # we 'normalize' the values of the gram matrix
-    # by dividing by the number of element in each feature maps.
-    return G.div(a * b * c * d)
+def gram_matrix(tensor):
+    B, C, H, W = tensor.shape
+    x = tensor.view(B, C, H*W)
+    x_t = x.transpose(1, 2)
+    return  torch.bmm(x, x_t) / (C*H*W)
 
 def style_loss(input, target):
     target = gram_matrix(target).detach()
+    # b, c, h, w = target.shape
+    # G = torch.cat(b *[gram_matrix(input)])
     G = gram_matrix(input)
+
     return F.mse_loss(G, target)
 
 class LossNetwork(nn.Module):
@@ -127,34 +126,3 @@ class LossNetwork(nn.Module):
                 features[layers[name]] = x
 
         return features
-        # s_loss = 0
-        # c_loss = 0
-        #
-        # x = self.norm(x)
-        # content = self.norm(content)
-        # content = self.relu2(self.conv2(self.relu1(self.conv1(content))))
-        # content = self.relu3(self.conv3(self.pool2(content)))
-        # content = self.relu4(self.conv4(content))
-        #
-        # x = self.relu1(self.conv1(x))
-        # style = self.relu1(self.conv1(self.style_img))
-        # s_loss += self.style_loss(x, style)
-        #
-        # x = self.relu2(self.conv2(x))
-        # style = self.relu2(self.conv2(style))
-        # s_loss += self.style_loss(x, style)
-        #
-        # x = self.relu3(self.conv3(self.pool2(x)))
-        # style = self.relu3(self.conv3(self.pool2(style)))
-        # s_loss += self.style_loss(x, style)
-        #
-        # x = self.relu4(self.conv4(x))
-        # style = self.relu4(self.conv4(style))
-        # s_loss += self.style_loss(x, style)
-        # c_loss += self.content_loss(x, content)
-        #
-        # x = self.conv5(self.pool4(x))
-        # style = self.conv5(self.pool4(style))
-        # s_loss += self.style_loss(x, style)
-        #
-        # return x, c_loss, s_loss
