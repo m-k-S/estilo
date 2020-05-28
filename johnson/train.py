@@ -79,7 +79,7 @@ for epoch in range(epochs):
 
         if iter % 50 == 0:
 
-            print ("ITER {} LOSS: {}".format(iter, losses[-1])))
+            print ("ITER {} LOSS: {}".format(iter, losses[-1]))
             torch.save(FNS.state_dict(), 'weights.pth')
 
 
