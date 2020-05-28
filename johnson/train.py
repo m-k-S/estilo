@@ -22,8 +22,7 @@ content_weight = 1
 
 transform = transforms.Compose([
     transforms.Resize((img_size, img_size)),
-    transforms.ToTensor(),
-    transforms.Normalize(norm_mean, norm_std)
+    transforms.ToTensor()
 ])
 
 norm_mean = torch.tensor([0.485, 0.456, 0.406]).to(device)
