@@ -25,17 +25,22 @@ transform = transforms.Compose([
     transforms.ToTensor()
 ])
 
+norm_mean = torch.tensor([0.485, 0.456, 0.406]).to(device)
+norm_std = torch.tensor([0.229, 0.224, 0.225]).to(device)
+vgg_norm = transforms.Normalize(norm_mean, norm_std)
+
 train_dataset = datasets.ImageFolder(train_dir, transform=transform)
-
 train_dataset = torch.utils.data.Subset(train_dataset, [i for i in range(20000)])
-
 train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-style_img = transform(Image.open(style_img_path)).unsqueeze(0).to(device)
 
 FNS = network.FastNeuralStyle().to(device)
-LossNet = network.LossNetwork(style_img).to(device)
+LossNet = network.LossNetwork().to(device)
 optimizer = optim.Adam(FNS.parameters(), lr=lr)
 
+style_img = vgg_norm(transform(Image.open(style_img_path))).unsqueeze(0).to(device)
+style_feats = LossNet(style_img)
+style_layers = {'3': 'relu1_2', '8': 'relu2_2', '17': 'relu3_4', '22': 'relu4_2', '26': 'relu4_4', '35': 'relu5_4'}
+content_layer = 'relu2_2'
 
 losses = []
 for epoch in range(epochs):
@@ -44,9 +49,18 @@ for epoch in range(epochs):
     for batch, _ in train_loader:
         batch = batch.to(device)
         optimizer.zero_grad()
+
         yhat = FNS(batch)
 
-        _, c_loss, s_loss = LossNet(yhat, batch)
+        content_feats = LossNet(vgg_norm(batch))
+        yhat_feats = LossNet(vgg_norm(yhat))
+
+        # relu2_2 for content loss
+        c_loss = network.content_loss(yhat_feats[content_layer], content_feats[content_layer])
+        s_loss = 0
+        for layer in style_layers.values():
+            s_loss += network.style_loss(yhat_feats[layer], style_feats[layer])
+
         total_loss = content_weight * c_loss + style_weight * s_loss
         losses.append(total_loss.item())
         total_loss.backward()

@@ -60,6 +60,8 @@ class DeconvLayer(nn.Module):
 class FastNeuralStyle(nn.Module):
     def __init__(self):
         super(FastNeuralStyle, self).__init__()
+
+
         self.conv1 = ConvLayer(3, 32, 9, 1)
         self.conv2 = ConvLayer(32, 64, 3, stride=2)
         self.conv3 = ConvLayer(64, 128, 3, stride=2)
@@ -86,25 +88,9 @@ class FastNeuralStyle(nn.Module):
         x = self.conv6(x)
         return x
 
-
-class Normalization(nn.Module):
-    def __init__(self, mean, std):
-        super(Normalization, self).__init__()
-        self.mean = mean.view(-1, 1, 1)
-        self.std = std.view(-1, 1, 1)
-
-    def forward(self, img):
-        # normalize img
-        return (img - self.mean) / self.std
-
-class ContentLoss(nn.Module):
-    def __init__(self):
-        super(ContentLoss, self).__init__()
-
-    def forward(self, input, target):
-        target = target.detach()
-        self.loss = F.mse_loss(input, target)
-        return self.loss
+def content_loss(input, target):
+    target = target.detach()
+    return F.mse_loss(input, target)
 
 def gram_matrix(input):
     a, b, c, d = input.size()  # a=batch size(=1)
@@ -118,73 +104,57 @@ def gram_matrix(input):
     # by dividing by the number of element in each feature maps.
     return G.div(a * b * c * d)
 
-class StyleLoss(nn.Module):
-    def __init__(self):
-        super(StyleLoss, self).__init__()
-
-    def forward(self, input, target):
-        target = gram_matrix(target).detach()
-        G = gram_matrix(input)
-        self.loss = F.mse_loss(G, target)
-        return self.loss
+def style_loss(input, target):
+    target = gram_matrix(target).detach()
+    G = gram_matrix(input)
+    return F.mse_loss(G, target)
 
 class LossNetwork(nn.Module):
-    def __init__(self, style_img):
+    def __init__(self):
         super(LossNetwork, self).__init__()
+        feats = models.vgg19(pretrained=True).features
+        self.features = feats
 
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        for param in self.features.parameters():
+            param.requires_grad = False
 
-        norm_mean = torch.tensor([0.485, 0.456, 0.406]).to(device)
-        norm_std = torch.tensor([0.229, 0.224, 0.225]).to(device)
-        self.norm = Normalization(norm_mean, norm_std)
+    def forward(self, x):
+        layers = {'3': 'relu1_2', '8': 'relu2_2', '17': 'relu3_4', '22': 'relu4_2', '26': 'relu4_4', '35': 'relu5_4'}
+        features = {}
+        for name, layer in self.features._modules.items():
+            x = layer(x)
+            if name in layers:
+                features[layers[name]] = x
 
-        feats = models.vgg19(pretrained=True).features[:11]
-
-        self.conv1 = feats[0]
-        self.relu1 = feats[1]
-        self.conv2 = feats[2]
-        self.relu2 = feats[3]
-        self.pool2 = feats[4]
-        self.conv3 = feats[5]
-        self.relu3 = feats[6]
-        self.conv4 = feats[7]
-        self.relu4 = feats[8]
-        self.pool4 = feats[9]
-        self.conv5 = feats[10]
-
-        self.style_img = self.norm(style_img.detach())
-        self.style_loss = StyleLoss()
-        self.content_loss = ContentLoss()
-
-    def forward(self, x, content):
-        s_loss = 0
-        c_loss = 0
-
-        x = self.norm(x)
-        content = self.norm(content)
-        content = self.relu2(self.conv2(self.relu1(self.conv1(content))))
-        content = self.relu3(self.conv3(self.pool2(content)))
-        content = self.relu4(self.conv4(content))
-
-        x = self.relu1(self.conv1(x))
-        style = self.relu1(self.conv1(self.style_img))
-        s_loss += self.style_loss(x, style)
-
-        x = self.relu2(self.conv2(x))
-        style = self.relu2(self.conv2(style))
-        s_loss += self.style_loss(x, style)
-
-        x = self.relu3(self.conv3(self.pool2(x)))
-        style = self.relu3(self.conv3(self.pool2(style)))
-        s_loss += self.style_loss(x, style)
-
-        x = self.relu4(self.conv4(x))
-        style = self.relu4(self.conv4(style))
-        s_loss += self.style_loss(x, style)
-        c_loss += self.content_loss(x, content)
-
-        x = self.conv5(self.pool4(x))
-        style = self.conv5(self.pool4(style))
-        s_loss += self.style_loss(x, style)
-
-        return x, c_loss, s_loss
+        return features
+        # s_loss = 0
+        # c_loss = 0
+        #
+        # x = self.norm(x)
+        # content = self.norm(content)
+        # content = self.relu2(self.conv2(self.relu1(self.conv1(content))))
+        # content = self.relu3(self.conv3(self.pool2(content)))
+        # content = self.relu4(self.conv4(content))
+        #
+        # x = self.relu1(self.conv1(x))
+        # style = self.relu1(self.conv1(self.style_img))
+        # s_loss += self.style_loss(x, style)
+        #
+        # x = self.relu2(self.conv2(x))
+        # style = self.relu2(self.conv2(style))
+        # s_loss += self.style_loss(x, style)
+        #
+        # x = self.relu3(self.conv3(self.pool2(x)))
+        # style = self.relu3(self.conv3(self.pool2(style)))
+        # s_loss += self.style_loss(x, style)
+        #
+        # x = self.relu4(self.conv4(x))
+        # style = self.relu4(self.conv4(style))
+        # s_loss += self.style_loss(x, style)
+        # c_loss += self.content_loss(x, content)
+        #
+        # x = self.conv5(self.pool4(x))
+        # style = self.conv5(self.pool4(style))
+        # s_loss += self.style_loss(x, style)
+        #
+        # return x, c_loss, s_loss
