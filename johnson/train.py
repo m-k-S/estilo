@@ -79,11 +79,7 @@ for epoch in range(epochs):
 
         if iter % 50 == 0:
 
-            print ("ITER {} LOSS: {}".format(iter, losses[-1]))
-            output = yhat.clone().cpu().squeeze()
-            output = transforms.ToPILImage()(output)
-            output.save("output.jpg")
-
+            print ("ITER {} LOSS: {}".format(iter, losses[-1])))
             torch.save(FNS.state_dict(), 'weights.pth')
 
 
