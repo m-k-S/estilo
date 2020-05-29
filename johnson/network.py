@@ -8,59 +8,62 @@ class ResidualBlock(nn.Module):
     def __init__(self, input_size, channels):
         super(ResidualBlock, self).__init__()
         self.conv1 = ConvLayer(input_size, channels, 3, 1)
+        self.in1 = nn.InstanceNorm2d(channels, affine=True)
         self.conv2 = ConvLayer(channels, channels, 3, 1)
-        self.bn2 = nn.BatchNorm2d(channels)
+        self.in2 = nn.InstanceNorm2d(channels, affine=True)
 
     def forward(self, x):
         xc = x.clone()
-        x = F.relu(self.conv1(x))
-        x = self.conv2(x)
+        x = F.relu(self.in1(self.conv1(x)))
+        x = self.in2(self.conv2(x))
         x = x + xc
         return x
 
 class ConvLayer(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size, stride, norm_type="batch"):
+    def __init__(self, in_channels, out_channels, kernel_size, stride, norm_type="instance"):
         super(ConvLayer, self).__init__()
-        self.norm_type = norm_type
-        # Padding Layers
         padding_size = kernel_size // 2
         self.reflection_pad = nn.ReflectionPad2d(padding_size)
-
-        # Convolution Layer
         self.conv_layer = nn.Conv2d(in_channels, out_channels, kernel_size, stride)
-
-        self.norm_layer = nn.BatchNorm2d(out_channels, affine=True)
+        self.norm_type = norm_type
+        if norm_type == "instance":
+            self.norm_layer = nn.InstanceNorm2d(out_channels, affine=True)
+        elif norm_type == "none":
+            self.norm_layer = None
 
     def forward(self, x):
         x = self.reflection_pad(x)
-        x = self.conv_layer(x)
-        if (self.norm_type=="None"):
-            out = x
+        if self.norm_type == "none":
+            return self.conv_layer(x)
         else:
-            out = self.norm_layer(x)
-        return out
+            return self.norm_layer(self.conv_layer(x))
 
-class DeconvLayer(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size, stride, output_padding):
-        super(DeconvLayer, self).__init__()
-
-        # Transposed Convolution
-        padding_size = kernel_size // 2
-        self.conv_transpose = nn.ConvTranspose2d(in_channels, out_channels, kernel_size, stride, padding_size, output_padding)
-
-        self.norm_layer = nn.BatchNorm2d(out_channels, affine=True)
+class UpsampleConvLayer(torch.nn.Module):
+    """UpsampleConvLayer
+    Upsamples the input and then does a convolution. This method gives better results
+    compared to ConvTranspose2d.
+    ref: http://distill.pub/2016/deconv-checkerboard/
+    """
+    def __init__(self, in_channels, out_channels, kernel_size, stride, upsample=None):
+        super(UpsampleConvLayer, self).__init__()
+        self.upsample = upsample
+        reflection_padding = kernel_size // 2
+        self.reflection_pad = nn.ReflectionPad2d(reflection_padding)
+        self.conv2d = nn.Conv2d(in_channels, out_channels, kernel_size, stride)
+        self.norm_layer = nn.InstanceNorm2d(out_channels, affine=True)
 
     def forward(self, x):
-        x = self.conv_transpose(x)
-
-        out = self.norm_layer(x)
+        x_in = x
+        if self.upsample:
+            x_in = F.interpolate(x_in, mode='nearest', scale_factor=self.upsample)
+        out = self.reflection_pad(x_in)
+        out = self.norm_layer(self.conv2d(out))
         return out
 
 
 class FastNeuralStyle(nn.Module):
     def __init__(self):
         super(FastNeuralStyle, self).__init__()
-
 
         self.conv1 = ConvLayer(3, 32, 9, 1)
         self.conv2 = ConvLayer(32, 64, 3, stride=2)
@@ -70,9 +73,9 @@ class FastNeuralStyle(nn.Module):
         self.res3 = ResidualBlock(128, 128)
         self.res4 = ResidualBlock(128, 128)
         self.res5 = ResidualBlock(128, 128)
-        self.conv4 = DeconvLayer(128, 64, 3, 2, 1)
-        self.conv5 = DeconvLayer(64, 32, 3, 2, 1)
-        self.conv6 = ConvLayer(32, 3, 9, stride=1, norm_type="None")
+        self.conv4 = UpsampleConvLayer(128, 64, 3, 1, 2)
+        self.conv5 = UpsampleConvLayer(64, 32, 3, 1, 2)
+        self.conv6 = ConvLayer(32, 3, 9, stride=1, norm_type="none")
 
     def forward(self, x):
         x = F.relu(self.conv1(x))
@@ -87,6 +90,8 @@ class FastNeuralStyle(nn.Module):
         x = F.relu(self.conv5(x))
         x = self.conv6(x)
         return x
+
+# LOSS NETWORK
 
 def content_loss(input, target):
     # b, c, h, w = input.shape
