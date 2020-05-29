@@ -18,8 +18,8 @@ img_size = 256
 batch_size = 4
 lr = 1e-3
 epochs = 1
-style_weight = 1e10
-content_weight = 1e5
+style_weight = 1e6
+content_weight = 1e3
 
 transform = transforms.Compose([
     transforms.Resize((img_size, img_size)),
