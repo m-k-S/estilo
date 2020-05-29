@@ -67,7 +67,7 @@ for epoch in range(epochs):
 
         batch_content_loss = 0
         batch_style_loss = 0
-        for b in range(batch_size):
+        for b in range(len(batch)):
             content_feats = LossNet(vgg_norm(batch[b, :, :, :].unsqueeze(0)))
             yhat_feats = LossNet(vgg_norm(yhat[b, :, :, :].unsqueeze(0)))
 
